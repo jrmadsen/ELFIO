@@ -185,6 +185,12 @@ template <class S> class relocation_section_accessor_template
     }
 
     //------------------------------------------------------------------------------
+    template <typename... Args> bool update_entry( Args&&... _args )
+    {
+        return set_entry( std::forward<Args>( _args )... );
+    }
+
+    //------------------------------------------------------------------------------
     bool set_entry( Elf_Xword  index,
                     Elf64_Addr offset,
                     Elf_Word   symbol,

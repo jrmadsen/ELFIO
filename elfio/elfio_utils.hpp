@@ -91,7 +91,7 @@ class endianess_convertor
         if ( !need_conversion ) {
             return value;
         }
-        return (int64_t)(*this)( (uint64_t)value );
+        return ( int64_t )( *this )( (uint64_t)value );
     }
 
     //------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ class endianess_convertor
         if ( !need_conversion ) {
             return value;
         }
-        return (int32_t)(*this)( (uint32_t)value );
+        return ( int32_t )( *this )( (uint32_t)value );
     }
 
     //------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ class endianess_convertor
         if ( !need_conversion ) {
             return value;
         }
-        return (int16_t)(*this)( (uint16_t)value );
+        return ( int16_t )( *this )( (uint16_t)value );
     }
 
     //------------------------------------------------------------------------------

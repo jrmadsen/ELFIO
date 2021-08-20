@@ -44,7 +44,7 @@ class segment
     ELFIO_GET_SET_ACCESS_DECL( Elf64_Addr, physical_address );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Xword, file_size );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Xword, memory_size );
-    ELFIO_GET_ACCESS_DECL( Elf64_Off, offset );
+    ELFIO_GET_SET_ACCESS_DECL( Elf64_Off, offset );
 
     virtual const char* get_data() const = 0;
 
@@ -56,7 +56,6 @@ class segment
     virtual bool     is_offset_initialized() const                      = 0;
 
   protected:
-    ELFIO_SET_ACCESS_DECL( Elf64_Off, offset );
     ELFIO_SET_ACCESS_DECL( Elf_Half, index );
 
     virtual const std::vector<Elf_Half>& get_sections() const               = 0;
@@ -136,16 +135,16 @@ template <class T> class segment_impl : public segment
     }
 
     //------------------------------------------------------------------------------
-  protected:
-    //------------------------------------------------------------------------------
-
-    //------------------------------------------------------------------------------
     void set_offset( Elf64_Off value )
     {
         ph.p_offset   = value;
         ph.p_offset   = ( *convertor )( ph.p_offset );
         is_offset_set = true;
     }
+
+    //------------------------------------------------------------------------------
+  protected:
+    //------------------------------------------------------------------------------
 
     //------------------------------------------------------------------------------
     bool is_offset_initialized() const { return is_offset_set; }

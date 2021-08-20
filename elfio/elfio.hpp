@@ -772,6 +772,7 @@ class elfio
                     if ( req_offset < cur_offset ) {
                         // something has gone awfully wrong, abort!
                         // secAlign would turn out negative, seeking backwards and overwriting previous data
+                        std::cerr << "required offset is less than current offset" << std::endl;
                         return false;
                     }
                     secAlign = req_offset - cur_offset;

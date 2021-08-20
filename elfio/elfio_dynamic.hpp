@@ -96,6 +96,23 @@ template <class S> class dynamic_section_accessor_template
     }
 
     //------------------------------------------------------------------------------
+    bool update_entry( Elf_Xword index, Elf_Xword tag, Elf_Xword value )
+    {
+        if ( index >= get_entries_num() ) { // Is index valid
+            return false;
+        }
+
+        if ( elf_file.get_class() == ELFCLASS32 ) {
+            generic_set_entry_dyn<Elf32_Dyn>( index, tag, value );
+        }
+        else {
+            generic_set_entry_dyn<Elf64_Dyn>( index, tag, value );
+        }
+
+        return true;
+    }
+
+    //------------------------------------------------------------------------------
     void add_entry( Elf_Xword tag, Elf_Xword value )
     {
         if ( elf_file.get_class() == ELFCLASS32 ) {
@@ -115,12 +132,90 @@ template <class S> class dynamic_section_accessor_template
         add_entry( tag, value );
     }
 
+    bool is_value_entry( Elf_Xword index ) const
+    {
+        if ( elf_file.get_class() == ELFCLASS32 )
+            return generic_get_updates_flags<Elf32_Dyn>( index ).first;
+        return generic_get_updates_flags<Elf64_Dyn>( index ).first;
+    }
+
+    bool is_address_entry( Elf_Xword index ) const
+    {
+        if ( elf_file.get_class() == ELFCLASS32 )
+            return generic_get_updates_flags<Elf32_Dyn>( index ).second;
+        return generic_get_updates_flags<Elf64_Dyn>( index ).second;
+    }
+
     //------------------------------------------------------------------------------
   private:
     //------------------------------------------------------------------------------
     Elf_Half get_string_table_index() const
     {
         return (Elf_Half)dynamic_section->get_link();
+    }
+
+    template <class T>
+    std::pair<bool, bool> generic_get_updates_flags( Elf_Xword index ) const
+    {
+        const endianess_convertor& convertor = elf_file.get_convertor();
+        Elf_Xword                  tag       = DT_NULL;
+
+        // Check unusual case when dynamic section has no data
+        if ( dynamic_section->get_data() == 0 ||
+             ( index + 1 ) * dynamic_section->get_entry_size() >
+                 dynamic_section->get_size() ) {
+            tag = DT_NULL;
+            return { false, false };
+        }
+
+        const T* pEntry = reinterpret_cast<const T*>(
+            dynamic_section->get_data() +
+            index * dynamic_section->get_entry_size() );
+        tag = convertor( pEntry->d_tag );
+
+        switch ( tag ) {
+        case DT_NULL:
+        case DT_SYMBOLIC:
+        case DT_TEXTREL:
+        case DT_BIND_NOW:
+            return { false, false };
+            break;
+        case DT_NEEDED:
+        case DT_PLTRELSZ:
+        case DT_RELASZ:
+        case DT_RELAENT:
+        case DT_STRSZ:
+        case DT_SYMENT:
+        case DT_SONAME:
+        case DT_RPATH:
+        case DT_RELSZ:
+        case DT_RELENT:
+        case DT_PLTREL:
+        case DT_INIT_ARRAYSZ:
+        case DT_FINI_ARRAYSZ:
+        case DT_RUNPATH:
+        case DT_FLAGS:
+        case DT_PREINIT_ARRAYSZ:
+            return { true, false };
+            break;
+        case DT_PLTGOT:
+        case DT_HASH:
+        case DT_STRTAB:
+        case DT_SYMTAB:
+        case DT_RELA:
+        case DT_INIT:
+        case DT_FINI:
+        case DT_REL:
+        case DT_DEBUG:
+        case DT_JMPREL:
+        case DT_INIT_ARRAY:
+        case DT_FINI_ARRAY:
+        case DT_PREINIT_ARRAY:
+        default:
+            return { false, true };
+            break;
+        }
+        return { false, false };
     }
 
     //------------------------------------------------------------------------------
@@ -190,6 +285,72 @@ template <class S> class dynamic_section_accessor_template
 
     //------------------------------------------------------------------------------
     template <class T>
+    void
+    generic_set_entry_dyn( Elf_Xword index, Elf_Xword tag, Elf_Xword value )
+    {
+        const endianess_convertor& convertor = elf_file.get_convertor();
+
+        // Check unusual case when dynamic section has no data
+        if ( dynamic_section->get_data() == 0 ||
+             ( index + 1 ) * dynamic_section->get_entry_size() >
+                 dynamic_section->get_size() ) {
+            tag   = DT_NULL;
+            value = 0;
+            return;
+        }
+
+        T* pEntry = reinterpret_cast<T*>(
+            const_cast<char*>( dynamic_section->get_data() ) +
+            index * dynamic_section->get_entry_size() );
+        tag = convertor( pEntry->d_tag );
+        switch ( tag ) {
+        case DT_NULL:
+        case DT_SYMBOLIC:
+        case DT_TEXTREL:
+        case DT_BIND_NOW:
+            value = 0;
+            break;
+        case DT_NEEDED:
+        case DT_PLTRELSZ:
+        case DT_RELASZ:
+        case DT_RELAENT:
+        case DT_STRSZ:
+        case DT_SYMENT:
+        case DT_SONAME:
+        case DT_RPATH:
+        case DT_RELSZ:
+        case DT_RELENT:
+        case DT_PLTREL:
+        case DT_INIT_ARRAYSZ:
+        case DT_FINI_ARRAYSZ:
+        case DT_RUNPATH:
+        case DT_FLAGS:
+        case DT_PREINIT_ARRAYSZ:
+            pEntry->d_un.d_val = convertor( value );
+            break;
+        case DT_PLTGOT:
+        case DT_HASH:
+        case DT_STRTAB:
+        case DT_SYMTAB:
+        case DT_RELA:
+        case DT_INIT:
+        case DT_FINI:
+        case DT_REL:
+        case DT_DEBUG:
+        case DT_JMPREL:
+        case DT_INIT_ARRAY:
+        case DT_FINI_ARRAY:
+        case DT_PREINIT_ARRAY:
+        default:
+            pEntry->d_un.d_ptr = convertor( value );
+            break;
+        }
+
+        pEntry->d_tag = convertor( tag );
+    }
+
+    //------------------------------------------------------------------------------
+    template <class T>
     void generic_add_entry_dyn( Elf_Xword tag, Elf_Xword value )
     {
         const endianess_convertor& convertor = elf_file.get_convertor();
@@ -243,6 +404,9 @@ template <class S> class dynamic_section_accessor_template
         dynamic_section->append_data( reinterpret_cast<char*>( &entry ),
                                       sizeof( entry ) );
     }
+
+  public:
+    S* get_raw() const { return dynamic_section; }
 
     //------------------------------------------------------------------------------
   private:

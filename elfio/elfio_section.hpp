@@ -47,7 +47,7 @@ class section
     ELFIO_GET_SET_ACCESS_DECL( Elf64_Addr, address );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Xword, size );
     ELFIO_GET_SET_ACCESS_DECL( Elf_Word, name_string_offset );
-    ELFIO_GET_ACCESS_DECL( Elf64_Off, offset );
+    ELFIO_GET_SET_ACCESS_DECL( Elf64_Off, offset );
 
     virtual const char* get_data() const                                = 0;
     virtual void        set_data( const char* pData, Elf_Word size )    = 0;
@@ -58,7 +58,7 @@ class section
     virtual void        set_stream_size( size_t value )                 = 0;
 
   protected:
-    ELFIO_SET_ACCESS_DECL( Elf64_Off, offset );
+    ///ELFIO_SET_ACCESS_DECL( Elf64_Off, offset );
     ELFIO_SET_ACCESS_DECL( Elf_Half, index );
 
     virtual void load( std::istream& stream, std::streampos header_offset ) = 0;
@@ -178,10 +178,10 @@ template <class T> class section_impl : public section
         return append_data( str_data.c_str(), (Elf_Word)str_data.size() );
     }
 
+    ELFIO_GET_SET_ACCESS( Elf64_Off, offset, header.sh_offset );
     //------------------------------------------------------------------------------
   protected:
     //------------------------------------------------------------------------------
-    ELFIO_GET_SET_ACCESS( Elf64_Off, offset, header.sh_offset );
 
     //------------------------------------------------------------------------------
     void set_index( Elf_Half value ) { index = value; }

@@ -51,6 +51,15 @@ template <class S> class symbol_section_accessor_template
     }
 
     //------------------------------------------------------------------------------
+    bool update_symbol( Elf_Xword index, Elf64_Addr value, Elf_Xword size )
+    {
+        if ( elf_file.get_class() == ELFCLASS32 )
+            return generic_update_symbol<Elf32_Sym>( index, value, size );
+
+        return generic_update_symbol<Elf64_Sym>( index, value, size );
+    }
+
+    //------------------------------------------------------------------------------
     bool get_symbol( Elf_Xword      index,
                      std::string&   name,
                      Elf64_Addr&    value,
@@ -453,6 +462,31 @@ template <class S> class symbol_section_accessor_template
 
     //------------------------------------------------------------------------------
     template <class T>
+    bool
+    generic_update_symbol( Elf_Xword index, Elf64_Addr value, Elf_Xword size )
+    {
+        bool ret = false;
+
+        if ( 0 != symbol_section->get_data() && index < get_symbols_num() ) {
+            T* pSym = reinterpret_cast<T*>(
+                const_cast<char*>( symbol_section->get_data() ) +
+                index * symbol_section->get_entry_size() );
+
+            const endianess_convertor& convertor = elf_file.get_convertor();
+
+            pSym->st_value = value;
+            pSym->st_value = convertor( pSym->st_value );
+            pSym->st_size  = size;
+            pSym->st_size  = convertor( pSym->st_size );
+
+            ret = true;
+        }
+
+        return ret;
+    }
+
+    //------------------------------------------------------------------------------
+    template <class T>
     Elf_Word generic_add_symbol( Elf_Word      name,
                                  Elf64_Addr    value,
                                  Elf_Xword     size,
@@ -533,8 +567,8 @@ template <class S> class symbol_section_accessor_template
     //------------------------------------------------------------------------------
   private:
     const elfio&   elf_file;
-    S*             symbol_section;
-    Elf_Half       hash_section_index;
+    S*             symbol_section     = nullptr;
+    Elf_Half       hash_section_index = 0;
     const section* hash_section;
 };
 
